@@ -1,351 +1,232 @@
 import 'server-only';
-
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-
-import {
-  user,
-  chat,
-  type User,
-  document,
-  type Suggestion,
-  suggestion,
-  message,
-  vote,
-  type DBMessage,
-} from './schema';
+import dbConnect from './connection';
+import { User, Chat, Message, Vote, Document, Suggestion } from './models';
 import { ArtifactKind } from '@/components/artifact';
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
+// 定义MongoDB的消息类型，避免使用旧的PostgreSQL类型
+interface MongoDBMessage {
+  _id: string;
+  chatId: string;
+  role: string;
+  parts: any[];
+  attachments: any[];
+  createdAt: Date;
+}
 
-// biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
+// 转换函数：将DBMessage格式转换为MongoDB格式
+function convertToMongoMessage(msg: any): any {
+  return {
+    _id: msg.id, // 使用传入的id作为_id
+    chatId: msg.chatId,
+    role: msg.role,
+    parts: msg.parts,
+    attachments: msg.attachments || [],
+    createdAt: msg.createdAt,
+  };
+}
 
-export async function getUser(email: string): Promise<Array<User>> {
-  try {
-    return await db.select().from(user).where(eq(user.email, email));
-  } catch (error) {
-    console.error('Failed to get user from database');
-    throw error;
-  }
+// 转换函数：将MongoDB文档转换回应用期望的格式
+function convertFromMongoDoc(doc: any): any {
+  if (!doc) return null;
+  // 将文档转换为普通对象
+  const obj = doc.toObject ? doc.toObject() : doc;
+  
+  // 将_id映射回id
+  const { _id, ...rest } = obj;
+  return {
+    id: _id,
+    ...rest
+  };
+}
+
+// 转换函数：将MongoDB文档数组转换为应用期望的格式
+function convertFromMongoDocs(docs: any[]): any[] {
+  return docs.map(convertFromMongoDoc);
+}
+
+export async function getUser(email: string) {
+  await dbConnect();
+  const users = await User.find({ email });
+  return convertFromMongoDocs(users);
 }
 
 export async function createUser(email: string, password: string) {
+  await dbConnect();
   const salt = genSaltSync(10);
   const hash = hashSync(password, salt);
-
-  try {
-    return await db.insert(user).values({ email, password: hash });
-  } catch (error) {
-    console.error('Failed to create user in database');
-    throw error;
-  }
+  const user = await User.create({ email, password: hash });
+  return convertFromMongoDoc(user);
 }
 
-export async function saveChat({
-  id,
-  userId,
-  title,
-}: {
-  id: string;
-  userId: string;
-  title: string;
-}) {
-  try {
-    return await db.insert(chat).values({
-      id,
-      createdAt: new Date(),
-      userId,
-      title,
-    });
-  } catch (error) {
-    console.error('Failed to save chat in database');
-    throw error;
-  }
+export async function saveChat({ id, userId, title }: { id: string; userId: string; title: string; }) {
+  await dbConnect();
+  const chat = await Chat.create({
+    _id: id,
+    userId,
+    title,
+    createdAt: new Date()
+  });
+  return convertFromMongoDoc(chat);
 }
 
 export async function deleteChatById({ id }: { id: string }) {
-  try {
-    await db.delete(vote).where(eq(vote.chatId, id));
-    await db.delete(message).where(eq(message.chatId, id));
-
-    return await db.delete(chat).where(eq(chat.id, id));
-  } catch (error) {
-    console.error('Failed to delete chat by id from database');
-    throw error;
-  }
+  await dbConnect();
+  await Vote.deleteMany({ chatId: id });
+  await Message.deleteMany({ chatId: id });
+  const result = await Chat.findByIdAndDelete(id);
+  return convertFromMongoDoc(result);
 }
 
 export async function getChatsByUserId({ id }: { id: string }) {
-  try {
-    return await db
-      .select()
-      .from(chat)
-      .where(eq(chat.userId, id))
-      .orderBy(desc(chat.createdAt));
-  } catch (error) {
-    console.error('Failed to get chats by user from database');
-    throw error;
-  }
+  await dbConnect();
+  const chats = await Chat.find({ userId: id }).sort({ createdAt: -1 });
+  return convertFromMongoDocs(chats);
 }
 
 export async function getChatById({ id }: { id: string }) {
-  try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    return selectedChat;
-  } catch (error) {
-    console.error('Failed to get chat by id from database');
-    throw error;
-  }
+  await dbConnect();
+  const chat = await Chat.findById(id);
+  return convertFromMongoDoc(chat);
 }
 
-export async function saveMessages({
-  messages,
-}: {
-  messages: Array<DBMessage>;
-}) {
-  try {
-    return await db.insert(message).values(messages);
-  } catch (error) {
-    console.error('Failed to save messages in database', error);
-    throw error;
-  }
+export async function saveMessages({ messages }: { messages: Array<any> }) {
+  await dbConnect();
+  const mongoMessages = messages.map(convertToMongoMessage);
+  const savedMessages = await Message.insertMany(mongoMessages);
+  return convertFromMongoDocs(savedMessages);
 }
 
 export async function getMessagesByChatId({ id }: { id: string }) {
-  try {
-    return await db
-      .select()
-      .from(message)
-      .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
-  } catch (error) {
-    console.error('Failed to get messages by chat id from database', error);
-    throw error;
-  }
+  await dbConnect();
+  const messages = await Message.find({ chatId: id }).sort({ createdAt: 1 });
+  return convertFromMongoDocs(messages);
 }
 
-export async function voteMessage({
-  chatId,
-  messageId,
-  type,
-}: {
-  chatId: string;
-  messageId: string;
-  type: 'up' | 'down';
-}) {
-  try {
-    const [existingVote] = await db
-      .select()
-      .from(vote)
-      .where(and(eq(vote.messageId, messageId)));
+export async function getMessageById({ id }: { id: string }) {
+  await dbConnect();
+  const messages = await Message.find({ _id: id });
+  return convertFromMongoDocs(messages);
+}
 
-    if (existingVote) {
-      return await db
-        .update(vote)
-        .set({ isUpvoted: type === 'up' })
-        .where(and(eq(vote.messageId, messageId), eq(vote.chatId, chatId)));
-    }
-    return await db.insert(vote).values({
-      chatId,
-      messageId,
-      isUpvoted: type === 'up',
-    });
-  } catch (error) {
-    console.error('Failed to upvote message in database', error);
-    throw error;
+export async function voteMessage({ chatId, messageId, type }: { chatId: string; messageId: string; type: 'up' | 'down'; }) {
+  await dbConnect();
+  const existingVote = await Vote.findOne({ messageId });
+  
+  if (existingVote) {
+    const updatedVote = await Vote.findOneAndUpdate(
+      { messageId, chatId },
+      { isUpvoted: type === 'up' },
+      { new: true }
+    );
+    return convertFromMongoDoc(updatedVote);
   }
+  
+  const newVote = await Vote.create({
+    chatId,
+    messageId,
+    isUpvoted: type === 'up'
+  });
+  return convertFromMongoDoc(newVote);
 }
 
 export async function getVotesByChatId({ id }: { id: string }) {
-  try {
-    return await db.select().from(vote).where(eq(vote.chatId, id));
-  } catch (error) {
-    console.error('Failed to get votes by chat id from database', error);
-    throw error;
-  }
+  await dbConnect();
+  const votes = await Vote.find({ chatId: id });
+  return convertFromMongoDocs(votes);
 }
 
-export async function saveDocument({
-  id,
-  title,
-  kind,
-  content,
-  userId,
-}: {
+export async function saveDocument({ id, title, kind, content, userId }: {
   id: string;
   title: string;
   kind: ArtifactKind;
   content: string;
   userId: string;
 }) {
-  try {
-    return await db.insert(document).values({
-      id,
-      title,
-      kind,
-      content,
-      userId,
-      createdAt: new Date(),
-    });
-  } catch (error) {
-    console.error('Failed to save document in database');
-    throw error;
-  }
+  await dbConnect();
+  const document = await Document.create({
+    _id: id,
+    title,
+    kind,
+    content,
+    userId,
+    createdAt: new Date()
+  });
+  return convertFromMongoDoc(document);
 }
 
 export async function getDocumentsById({ id }: { id: string }) {
-  try {
-    const documents = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(asc(document.createdAt));
-
-    return documents;
-  } catch (error) {
-    console.error('Failed to get document by id from database');
-    throw error;
-  }
+  await dbConnect();
+  const documents = await Document.find({ _id: id }).sort({ createdAt: 1 });
+  return convertFromMongoDocs(documents);
 }
 
 export async function getDocumentById({ id }: { id: string }) {
-  try {
-    const [selectedDocument] = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt));
-
-    return selectedDocument;
-  } catch (error) {
-    console.error('Failed to get document by id from database');
-    throw error;
-  }
+  await dbConnect();
+  const document = await Document.findOne({ _id: id }).sort({ createdAt: -1 });
+  return convertFromMongoDoc(document);
 }
 
-export async function deleteDocumentsByIdAfterTimestamp({
-  id,
-  timestamp,
-}: {
-  id: string;
-  timestamp: Date;
-}) {
-  try {
-    await db
-      .delete(suggestion)
-      .where(
-        and(
-          eq(suggestion.documentId, id),
-          gt(suggestion.documentCreatedAt, timestamp),
-        ),
-      );
-
-    return await db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)));
-  } catch (error) {
-    console.error(
-      'Failed to delete documents by id after timestamp from database',
-    );
-    throw error;
-  }
+export async function deleteDocumentsByIdAfterTimestamp({ id, timestamp }: { id: string; timestamp: Date }) {
+  await dbConnect();
+  await Suggestion.deleteMany({
+    documentId: id,
+    documentCreatedAt: { $gt: timestamp }
+  });
+  const result = await Document.deleteMany({
+    _id: id,
+    createdAt: { $gt: timestamp }
+  });
+  return result;
 }
 
-export async function saveSuggestions({
-  suggestions,
-}: {
-  suggestions: Array<Suggestion>;
-}) {
-  try {
-    return await db.insert(suggestion).values(suggestions);
-  } catch (error) {
-    console.error('Failed to save suggestions in database');
-    throw error;
+export async function deleteMessagesByChatIdAfterTimestamp({ chatId, timestamp }: { chatId: string; timestamp: Date }) {
+  await dbConnect();
+  const messagesToDelete = await Message.find({
+    chatId,
+    createdAt: { $gte: timestamp }
+  });
+
+  const messageIds = messagesToDelete.map(msg => msg._id);
+
+  if (messageIds.length > 0) {
+    await Vote.deleteMany({
+      chatId,
+      messageId: { $in: messageIds }
+    });
+
+    return await Message.deleteMany({
+      chatId,
+      _id: { $in: messageIds }
+    });
   }
+  return { deletedCount: 0 };
 }
 
-export async function getSuggestionsByDocumentId({
-  documentId,
-}: {
-  documentId: string;
-}) {
-  try {
-    return await db
-      .select()
-      .from(suggestion)
-      .where(and(eq(suggestion.documentId, documentId)));
-  } catch (error) {
-    console.error(
-      'Failed to get suggestions by document version from database',
-    );
-    throw error;
-  }
-}
-
-export async function getMessageById({ id }: { id: string }) {
-  try {
-    return await db.select().from(message).where(eq(message.id, id));
-  } catch (error) {
-    console.error('Failed to get message by id from database');
-    throw error;
-  }
-}
-
-export async function deleteMessagesByChatIdAfterTimestamp({
-  chatId,
-  timestamp,
-}: {
-  chatId: string;
-  timestamp: Date;
-}) {
-  try {
-    const messagesToDelete = await db
-      .select({ id: message.id })
-      .from(message)
-      .where(
-        and(eq(message.chatId, chatId), gte(message.createdAt, timestamp)),
-      );
-
-    const messageIds = messagesToDelete.map((message) => message.id);
-
-    if (messageIds.length > 0) {
-      await db
-        .delete(vote)
-        .where(
-          and(eq(vote.chatId, chatId), inArray(vote.messageId, messageIds)),
-        );
-
-      return await db
-        .delete(message)
-        .where(
-          and(eq(message.chatId, chatId), inArray(message.id, messageIds)),
-        );
+export async function saveSuggestions({ suggestions }: { suggestions: Array<any> }) {
+  await dbConnect();
+  // 确保每个suggestion对象都有正确的结构
+  const mongoSuggestions = suggestions.map(suggestion => {
+    // 如果suggestion有id字段，将其映射到_id
+    if (suggestion.id) {
+      const { id, ...rest } = suggestion;
+      return { _id: id, ...rest };
     }
-  } catch (error) {
-    console.error(
-      'Failed to delete messages by id after timestamp from database',
-    );
-    throw error;
-  }
+    return suggestion;
+  });
+  
+  const savedSuggestions = await Suggestion.insertMany(mongoSuggestions);
+  return convertFromMongoDocs(savedSuggestions);
 }
 
-export async function updateChatVisiblityById({
-  chatId,
-  visibility,
-}: {
-  chatId: string;
-  visibility: 'private' | 'public';
-}) {
-  try {
-    return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
-  } catch (error) {
-    console.error('Failed to update chat visibility in database');
-    throw error;
-  }
+export async function getSuggestionsByDocumentId({ documentId }: { documentId: string }) {
+  await dbConnect();
+  const suggestions = await Suggestion.find({ documentId });
+  return convertFromMongoDocs(suggestions);
+}
+
+export async function updateChatVisiblityById({ chatId, visibility }: { chatId: string; visibility: 'private' | 'public' }) {
+  await dbConnect();
+  const chat = await Chat.findByIdAndUpdate(chatId, { visibility }, { new: true });
+  return convertFromMongoDoc(chat);
 }
