@@ -1,0 +1,17 @@
+{
+  "apps": [
+    {
+      "name": "redis-mongodb-sync",
+      "script": "scripts/sync-redis-to-mongodb.js",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "200M",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "log_date_format": "YYYY-MM-DD HH:mm:ss",
+      "merge_logs": true
+    }
+  ]
+}

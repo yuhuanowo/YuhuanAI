@@ -1,11 +1,12 @@
 import { anthropic } from '@ai-sdk/anthropic'
-import { createAzure } from '@ai-sdk/azure'
+// import { createAzure } from '@ai-sdk/azure'
 import { deepseek } from '@ai-sdk/deepseek'
 import { createFireworks, fireworks } from '@ai-sdk/fireworks'
 import { google } from '@ai-sdk/google'
 import { groq } from '@ai-sdk/groq'
 import { createOpenAI, openai } from '@ai-sdk/openai'
 import { xai } from '@ai-sdk/xai'
+import { createAzure } from '@quail-ai/azure-ai-provider'
 import {
   createProviderRegistry,
   extractReasoningMiddleware,
@@ -21,9 +22,14 @@ export const registry = createProviderRegistry({
   ollama: createOllama({
     baseURL: `${process.env.OLLAMA_BASE_URL}/api`
   }),
+  // azure: createAzure({
+  //   apiKey: process.env.AZURE_API_KEY,
+  //   resourceName: process.env.AZURE_RESOURCE_NAME,
+  //   apiVersion: '2025-03-01-preview'
+  // }),
   azure: createAzure({
     apiKey: process.env.AZURE_API_KEY,
-    resourceName: process.env.AZURE_RESOURCE_NAME,
+    endpoint: process.env.AZURE_RESOURCE_NAME,
     apiVersion: '2025-03-01-preview'
   }),
   deepseek,
@@ -137,8 +143,10 @@ export function getToolCallModel(model?: string) {
       return getModel(`ollama:${ollamaModel}`)
     case 'google':
       return getModel('google:gemini-2.0-flash')
+    case 'azure':
+      return getModel('azure:gpt-4.1')
     default:
-      return getModel('openai:gpt-4o-mini')
+      return getModel('groq:llama-3.1-8b-instant')
   }
 }
 

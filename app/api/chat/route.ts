@@ -8,12 +8,12 @@ import { cookies } from 'next/headers'
 export const maxDuration = 30
 
 const DEFAULT_MODEL: Model = {
-  id: 'gpt-4o-mini',
-  name: 'GPT-4o mini',
-  provider: 'OpenAI',
-  providerId: 'openai',
+  id: "openai/gpt-4.1-mini",
+  name: "GPT-4.1 mini",
+  provider: "OpenAI",
+  providerId: "azure",
   enabled: true,
-  toolCallType: 'native'
+  toolCallType: "native"
 }
 
 export async function POST(req: Request) {

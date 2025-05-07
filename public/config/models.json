@@ -1,81 +1,49 @@
 {
   "models": [
     {
-      "id": "gpt-4.1",
+      "id": "openai/gpt-4.1",
       "name": "GPT-4.1",
       "provider": "OpenAI",
-      "providerId": "openai",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
     },
     {
-      "id": "gpt-4.1-mini",
+      "id": "openai/gpt-4.1-mini",
       "name": "GPT-4.1 mini",
       "provider": "OpenAI",
-      "providerId": "openai",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
     },
     {
-      "id": "gpt-4.1-nano",
+      "id": "openai/gpt-4.1-nano",
       "name": "GPT-4.1 nano",
       "provider": "OpenAI",
-      "providerId": "openai",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
     },
     {
-      "id": "o3-mini",
+      "id": "openai/o3-mini",
       "name": "o3 mini",
       "provider": "OpenAI",
-      "providerId": "openai",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
     },
     {
-      "id": "gpt-4o",
+      "id": "openai/gpt-4o",
       "name": "GPT-4o",
       "provider": "OpenAI",
-      "providerId": "openai",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
     },
     {
-      "id": "gpt-4o-mini",
+      "id": "openai/gpt-4o-mini",
       "name": "GPT-4o mini",
       "provider": "OpenAI",
-      "providerId": "openai",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "claude-3-7-sonnet-20250219",
-      "name": "Claude 3.7 Sonnet",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "claude-3-5-sonnet-latest",
-      "name": "Claude 3.5 Sonnet",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "claude-3-5-haiku-20241022",
-      "name": "Claude 3.5 Haiku",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "<AZURE_DEPLOYMENT_NAME>",
-      "name": "<AZURE_DEPLOYMENT_NAME>",
-      "provider": "Azure",
       "providerId": "azure",
       "enabled": true,
       "toolCallType": "native"
@@ -107,37 +75,64 @@
       "toolCallModel": "gemini-2.0-flash"
     },
     {
-      "id": "accounts/fireworks/models/deepseek-r1",
-      "name": "DeepSeek R1",
-      "provider": "Fireworks",
-      "providerId": "fireworks",
+      "id": "gemini-2.5-flash-preview-04-17",
+      "name": "Gemini 2.5 Flash Preview (Exp)",
+      "provider": "Google Generative AI",
+      "providerId": "google",
       "enabled": true,
       "toolCallType": "manual",
-      "toolCallModel": "accounts/fireworks/models/llama-v3p1-8b-instruct"
+      "toolCallModel": "gemini-2.0-flash"
     },
     {
-      "id": "accounts/fireworks/models/llama4-maverick-instruct-basic",
-      "name": "Llama 4 Maverick",
-      "provider": "Fireworks",
-      "providerId": "fireworks",
+      "id": "gemini-2.0-flash-lite",
+      "name": "Gemini 2.0 Flash Lite",
+      "provider": "Google Generative AI",
+      "providerId": "google",
       "enabled": true,
       "toolCallType": "manual",
-      "toolCallModel": "accounts/fireworks/models/llama-v3p1-8b-instruct"
+      "toolCallModel": "gemini-2.0-flash"
     },
     {
-      "id": "deepseek-reasoner",
+      "id": "gemini-1.5-flash",
+      "name": "Gemini 1.5 Flash",
+      "provider": "Google Generative AI",
+      "providerId": "google",
+      "enabled": true,
+      "toolCallType": "manual",
+      "toolCallModel": "gemini-2.0-flash"
+    },
+    {
+      "id": "gemini-1.5-pro",
+      "name": "Gemini 1.5 Pro",
+      "provider": "Google Generative AI",
+      "providerId": "google",
+      "enabled": true,
+      "toolCallType": "manual",
+      "toolCallModel": "gemini-2.0-flash"
+    },
+    {
+      "id": "gemma-3-27b-it",
+      "name": "Gemma 3",
+      "provider": "Google Generative AI",
+      "providerId": "google",
+      "enabled": false,
+      "toolCallType": "manual",
+      "toolCallModel": "gemini-2.0-flash"
+    },
+    {
+      "id": "deepseek/DeepSeek-R1",
       "name": "DeepSeek R1",
       "provider": "DeepSeek",
-      "providerId": "deepseek",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "manual",
-      "toolCallModel": "deepseek-chat"
+      "toolCallModel": "deepseek/DeepSeek-V3-0324"
     },
     {
-      "id": "deepseek-chat",
+      "id": "deepseek/DeepSeek-V3-0324",
       "name": "DeepSeek V3",
       "provider": "DeepSeek",
-      "providerId": "deepseek",
+      "providerId": "azure",
       "enabled": true,
       "toolCallType": "manual"
     },
@@ -166,47 +161,6 @@
       "enabled": true,
       "toolCallType": "manual",
       "toolCallModel": "phi4"
-    },
-    {
-      "id": "<OLLAMA_MODEL_ID>",
-      "name": "<OLLAMA_MODEL_NAME>",
-      "provider": "Ollama",
-      "providerId": "ollama",
-      "enabled": true,
-      "toolCallType": "manual",
-      "toolCallModel": "<OLLAMA_MODEL_ID>"
-    },
-    {
-      "id": "grok-2-1212",
-      "name": "Grok 2",
-      "provider": "xAI",
-      "providerId": "xai",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "grok-2-vision-1212",
-      "name": "Grok 2 Vision",
-      "provider": "xAI",
-      "providerId": "xai",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "grok-3-beta",
-      "name": "Grok 3 Beta",
-      "provider": "xAI",
-      "providerId": "xai",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "<OPENAI_COMPATIBLE_MODEL>",
-      "name": "<OPENAI_COMPATIBLE_MODEL>",
-      "provider": "OpenAI Compatible",
-      "providerId": "openai-compatible",
-      "enabled": true,
-      "toolCallType": "native"
     }
   ]
 }
